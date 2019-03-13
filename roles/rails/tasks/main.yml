@@ -1,0 +1,99 @@
+- name: Gitインストール
+  become: yes
+  yum:
+    name: git
+    state: latest
+- name: rbenvインストール
+  become: no
+  git:
+    repo: https://github.com/rbenv/rbenv.git
+    dest: ~/.rbenv
+- name: rbenvを環境変数に設定
+  template:
+    src: 001_rbenv.sh
+    dest: ~/.bash.d/001_rbenv.sh
+    mode: 0755
+  become: no
+- name: rubyのビルドに必要なツールをインストール
+  become: yes
+  yum: 
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - gcc
+    - gcc-c++
+    - openssl-devel
+    - libyaml-devel
+    - libffi-devel
+    - readline-devel
+    - zlib-devel
+    - gdbm-devel
+    - ncurses-devel
+- name: ruby-buildのインストール
+  become: no
+  git:
+    repo: https://github.com/sstephenson/ruby-build.git
+    dest: ~/.rbenv/plugins/ruby-build
+- name: railsのappディレクトリを作成
+  become: no
+  file:
+    path: "{{ __app_dir }}"
+    state: directory
+    mode: 0755
+- name: rubyの現在のバージョンを確認
+  become: no
+  shell: |
+    /bin/bash -lc "ruby -v | grep -oP '^ruby \d{1}.\d{1}.\d{1}' | cut -f 2 -d ' '"
+  args:
+    chdir: "{{ __app_dir }}"
+  register: current_ruby_version
+  changed_when: False
+- name: bash_profileを反映
+  shell: |
+    /bin/bash -lc  "source ~/.bash_profile"
+  become: no
+  when: current_ruby_version.stdout != __version
+- name: rubyのインストール（rbenvインストール）
+  become: no
+  shell: |
+    /bin/bash -lc "rbenv install {{ __version }}"
+  args:
+    chdir: "{{ __app_dir }}"
+  when: current_ruby_version.stdout != __version
+- name: rubyのインストール（bundlerインストール）
+  become: no
+  shell: |
+    /bin/bash -lc "gem install bundler"
+  args:
+    chdir: "{{ __app_dir }}"
+  when: current_ruby_version.stdout != __version
+- name: rubyのインストール（rehashオプション実行し、ruby用コマンドを使用可能にする）
+  become: no
+  shell: |
+    /bin/bash -lc "rbenv rehash"
+  args:
+    chdir: "{{ __app_dir }}"
+  when: current_ruby_version.stdout != __version
+- name: rubyのインストール（railsディレクトリ内で使用するrubyバージョンを指定する）
+  become: no
+  shell: |
+    /bin/bash -lc "rbenv local {{ __version }}"
+  args:
+    chdir: "{{ __app_dir }}"
+  when: current_ruby_version.stdout != __version
+- name: unicornのインストール
+  become: no
+  shell: |
+    /bin/bash -lc "gem install unicorn;rbenv rehash"
+- name: unicorn_railsのインストール
+  become: no
+  shell: |
+    /bin/bash -lc "gem install unicorn-rails;rbenv rehash"
+- name: ImageMagickインストール
+  become: yes
+  yum:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - ImageMagick
+    - ImageMagick-devel

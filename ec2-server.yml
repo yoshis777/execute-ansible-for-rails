@@ -1,0 +1,7 @@
+- hosts: prodserver
+  roles:
+    - init
+    - rails
+    - postgresql
+    - nodejs
+    - nginx

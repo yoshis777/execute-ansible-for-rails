@@ -1,0 +1,13 @@
+- name: bash_profileをデプロイ
+  template:
+    src: .bash_profile
+    dest: ~/.bash_profile
+    mode: 0644
+  become: no
+
+- name: bash.dディレクトリ作成
+  file:
+    path: ~/.bash.d
+    state: directory
+    mode: 0755
+  become: no

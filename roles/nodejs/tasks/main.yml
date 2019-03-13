@@ -1,0 +1,41 @@
+- name: nodejsがインストールされているかどうか
+  stat:
+    path: /usr/local/bin/node
+  register: nodejs_bin
+
+- name: nodejsをダウンロード、セットアップ
+  shell: |
+    curl -sL https://rpm.nodesource.com/setup_8.x | bash -
+  when: not nodejs_bin.stat.exists
+  become: yes
+
+- name: npm使用のための一時的なnodejsインストール
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items: 
+    - nodejs
+  when: not nodejs_bin.stat.exists
+  become: yes
+
+- name: バージョン管理パッケージインストール
+  npm:
+    name: n
+    state: present
+    global: yes
+  when: not nodejs_bin.stat.exists
+  become: yes
+  
+- name: 特定のnodejsバージョンをインストール
+  shell: |
+    n {{ __version }}
+  when: not nodejs_bin.stat.exists
+  become: yes
+
+- name: npmパスを環境変数にセット
+  template:
+    src: 201_nodejs.sh
+    dest: ~/.bash.d/201_nodejs.sh
+    mode: 0755
+  become: no
+  when: not nodejs_bin.stat.exists
